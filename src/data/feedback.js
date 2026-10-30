@@ -1,0 +1,67 @@
+// Feedback and Complaints dataset
+export const initialReviews = [
+  {
+    id: 'rev_1',
+    orderId: 'FOOD-A892K1',
+    customerId: 'user_cust_1',
+    customerName: 'Aarav Sharma',
+    restaurantId: 'rest_1',
+    restaurantName: 'Spice Symphony',
+    rating: 5,
+    foodQuality: 5,
+    deliveryExperience: 5,
+    comment: 'The Chicken Biryani was sensational! Perfectly cooked rice, tender succulent chicken, and reached piping hot.',
+    category: 'Food Quality',
+    createdAt: '2026-03-28T14:30:00.000Z',
+    restaurantResponse: 'Thank you Aarav! We take great pride in our signature dum biryani. Delighted to serve you!',
+    respondedAt: '2026-03-28T16:00:00.000Z',
+  },
+  {
+    id: 'rev_2',
+    orderId: 'FOOD-C902P3',
+    customerId: 'user_cust_2',
+    customerName: 'Priya Verma',
+    restaurantId: 'rest_4',
+    restaurantName: 'Bella Italia Trattoria',
+    rating: 4,
+    foodQuality: 5,
+    deliveryExperience: 4,
+    comment: 'Authentic stone oven pizza crust and rich Alfredo pasta. Took slightly longer during peak rush hour.',
+    category: 'Delivery Experience',
+    createdAt: '2026-03-27T20:15:00.000Z',
+    restaurantResponse: null,
+    respondedAt: null,
+  },
+];
+
+export const initialComplaints = [
+  {
+    id: 'cmp_1',
+    orderId: 'FOOD-D551Q8',
+    customerId: 'user_cust_1',
+    customerName: 'Aarav Sharma',
+    userRole: 'customer',
+    subject: 'Simulated refund speed confirmation',
+    category: 'Payment',
+    description: 'Order was cancelled immediately, wanted to check if demo refund status reflects in payment portal.',
+    status: 'RESOLVED', // PENDING, UNDER_REVIEW, RESOLVED
+    adminNotes: 'Demo UPI refund credited back to simulated wallet.',
+    createdAt: '2026-03-25T19:30:00.000Z',
+    resolvedAt: '2026-03-25T20:00:00.000Z',
+  },
+  {
+    id: 'cmp_2',
+    orderId: null,
+    customerId: 'user_rest_1',
+    customerName: 'Chef Rajesh Khanna (Spice Symphony)',
+    userRole: 'restaurant',
+    subject: 'Request for featured banner placement in Bandra West',
+    category: 'General Platform',
+    description: 'We have updated our weekend special Mughlai menu and would like to be featured on the customer home carousel.',
+    status: 'UNDER_REVIEW',
+    adminNotes: 'Reviewing recent 4.8 rating history for promotion qualification.',
+    createdAt: '2026-03-29T11:00:00.000Z',
+    resolvedAt: null,
+  },
+];
+

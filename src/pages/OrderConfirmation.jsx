@@ -1,21 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CheckCircle, Package, Clock, MapPin, User, Phone, ShoppingBag, ListOrdered } from 'lucide-react';
-import { getOrderById } from '../services/orderService.js';
+import {
+  CheckCircle,
+  Package,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  ShoppingBag,
+  ListOrdered,
+  Navigation,
+} from 'lucide-react';
+import { useOrders } from '../context/OrderContext.jsx';
+import { getOrderById as getLegacyOrderById } from '../services/orderService.js';
 
 export default function OrderConfirmation() {
   const { orderId } = useParams();
+  const { getOrderById } = useOrders();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const data = await getOrderById(orderId);
-      setOrder(data);
+      // Try OrderContext first
+      const ctxOrder = getOrderById(orderId);
+      if (ctxOrder) {
+        setOrder(ctxOrder);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to legacy service
+      const legacy = await getLegacyOrderById(orderId);
+      setOrder(legacy);
       setLoading(false);
     }
     load();
-  }, [orderId]);
+  }, [orderId, getOrderById]);
 
   if (loading) {
     return (
@@ -32,13 +53,22 @@ export default function OrderConfirmation() {
           <p className="text-5xl mb-4">🤔</p>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Order not found</h2>
           <p className="text-gray-500 mb-6">We couldn't find an order with ID: {orderId}</p>
-          <Link to="/" className="text-[#FF6B35] font-semibold hover:underline">Go to Home</Link>
+          <Link to="/" className="text-[#FF6B35] font-semibold hover:underline">
+            Go to Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  const orderDate = new Date(order.createdAt);
+  const orderDate = new Date(order.createdAt || '2026-10-30T12:00:00Z');
+  const bill = order.bill || {
+    itemSubtotal: order.itemSubtotal || 0,
+    deliveryFee: order.deliveryFee || 0,
+    tax: order.tax || 0,
+    discount: order.discount || 0,
+    grandTotal: order.grandTotal || 0,
+  };
 
   return (
     <div className="min-h-screen bg-[#FFF9F3]">
@@ -53,136 +83,148 @@ export default function OrderConfirmation() {
           <h1 className="text-3xl font-extrabold text-gray-800 mb-2">
             Your Order Has Been Confirmed!
           </h1>
-          <p className="text-gray-500">Thank you for ordering with FOODORA. Your meal is being prepared!</p>
+          <p className="text-gray-500">
+            Thank you for ordering with FOODORA. Your meal from{' '}
+            <strong className="text-gray-800">{order.restaurantName || 'the kitchen'}</strong> is being prepared!
+          </p>
         </div>
 
         {/* Order Details Card */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 mb-6">
-          <div className="flex items-center justify-between pb-6 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-gray-100 gap-2">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Order ID</p>
-              <p className="text-xl font-extrabold text-[#FF6B35] font-mono">{order.id}</p>
+              <p className="text-xs text-gray-400 uppercase font-semibold">Order Reference</p>
+              <p className="text-2xl font-bold text-[#FF6B35] font-mono">{order.id}</p>
             </div>
-            <span className="px-3.5 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">
-              {order.status || 'Confirmed'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-5 border-b border-gray-100">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B35] shrink-0">
-                <Clock size={18} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Order Date & Time</p>
-                <p className="text-sm font-semibold text-gray-800">
-                  {orderDate.toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}{' '}
-                  at{' '}
-                  {orderDate.toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B35] shrink-0">
-                <Package size={18} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Estimated Delivery Time</p>
-                <p className="text-sm font-semibold text-gray-800">{order.estimatedPrepTime || '25-30 min'}</p>
-              </div>
+            <div className="sm:text-right">
+              <p className="text-xs text-gray-400">Order Placed At</p>
+              <p className="text-sm font-semibold text-gray-700">
+                {orderDate.toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
             </div>
           </div>
 
-          {/* Customer Info */}
-          <div className="py-5 border-b border-gray-100">
-            <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider text-xs">Customer & Delivery Info</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2.5 text-gray-700">
-                <User size={15} className="text-[#FF6B35] shrink-0" />
-                <span className="font-medium">{order.customerName}</span>
-              </div>
-              <div className="flex items-center gap-2.5 text-gray-700">
-                <Phone size={15} className="text-[#FF6B35] shrink-0" />
-                <span>+91 {order.mobile}</span>
-              </div>
-              <div className="flex items-start gap-2.5 text-gray-700">
-                <MapPin size={15} className="text-[#FF6B35] mt-0.5 shrink-0" />
-                <span>{order.address}</span>
-              </div>
-              {order.instructions && (
-                <div className="text-xs text-gray-500 bg-orange-50/50 p-2.5 rounded-xl mt-2">
-                  <span className="font-semibold text-gray-700">Note:</span> {order.instructions}
+          {/* Delivery & Customer Info */}
+          <div className="py-6 border-b border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Delivering To</p>
+              <div className="flex items-start gap-2 text-gray-700">
+                <MapPin size={16} className="text-[#FF6B35] mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">{order.customerName}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">{order.deliveryAddress}</p>
+                  {order.landmark && (
+                    <p className="text-gray-400 text-xs mt-0.5">Near: {order.landmark}</p>
+                  )}
                 </div>
-              )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Payment Method</p>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Clock size={16} className="text-[#FF6B35] shrink-0" />
+                <div>
+                  <p className="font-semibold">{order.paymentMethod || 'Online Payment'}</p>
+                  <p className="text-gray-500 text-xs capitalize">
+                    Status:{' '}
+                    <span className="text-green-600 font-semibold">
+                      {order.paymentStatus || 'Successful'}
+                    </span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Items */}
-          <div className="pt-5">
-            <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider text-xs">Ordered Items</h4>
+          {/* Items Summary */}
+          <div className="py-6 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Order Items</p>
             <div className="space-y-3">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#FF6B35]" />
-                    <span className="text-gray-700 font-medium">
-                      {item.name} <span className="text-gray-400">× {item.quantity}</span>
-                    </span>
+              {order.items?.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-10 h-10 object-cover rounded-lg"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">{item.name}</p>
+                      <p className="text-gray-400 text-xs">Qty: {item.quantity}</p>
+                    </div>
                   </div>
-                  <span className="font-semibold text-gray-800">₹{item.price * item.quantity}</span>
+                  <span className="font-semibold text-gray-800">
+                    ₹{item.price * item.quantity}
+                  </span>
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="border-t border-gray-100 mt-5 pt-4 space-y-2 text-sm">
+          {/* Bill Breakdown */}
+          <div className="pt-6">
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Bill Breakdown</p>
+            <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-500">
                 <span>Subtotal</span>
-                <span>₹{order.bill.subtotal}</span>
+                <span>₹{bill.itemSubtotal}</span>
               </div>
+              {bill.discount > 0 && (
+                <div className="flex justify-between text-green-600 font-medium">
+                  <span>Coupon Discount</span>
+                  <span>-₹{bill.discount}</span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-500">
                 <span>Delivery Fee</span>
-                <span className={order.bill.deliveryFee === 0 ? 'text-green-600 font-medium' : ''}>
-                  {order.bill.deliveryFee === 0 ? 'FREE' : `₹${order.bill.deliveryFee}`}
+                <span className={bill.deliveryFee === 0 ? 'text-green-600 font-medium' : ''}>
+                  {bill.deliveryFee === 0 ? 'FREE' : `₹${bill.deliveryFee}`}
                 </span>
               </div>
               <div className="flex justify-between text-gray-500">
-                <span>Taxes</span>
-                <span>₹{order.bill.tax}</span>
+                <span>Taxes & Platform Fees</span>
+                <span>₹{bill.tax}</span>
               </div>
               <div className="flex justify-between font-bold text-base text-gray-900 pt-2 border-t border-gray-100">
-                <span>Total Amount</span>
-                <span className="text-xl text-[#FF6B35]">₹{order.bill.grandTotal}</span>
+                <span>Total Amount Paid</span>
+                <span className="text-xl text-[#FF6B35]">₹{bill.grandTotal}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Link
-            to="/menu"
-            className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B35] hover:bg-[#e55a2b] text-white py-3.5 rounded-xl font-semibold transition-all hover:shadow-lg hover:shadow-orange-200"
+            to={`/track/${order.id}`}
+            className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B35] hover:bg-[#e55a2b] text-white py-3.5 rounded-xl font-bold transition-all shadow-md shadow-orange-500/20"
           >
-            <ShoppingBag size={18} />
-            Continue Shopping
+            <Navigation size={18} />
+            Track Live Order
           </Link>
           <Link
             to="/orders"
-            className="flex-1 flex items-center justify-center gap-2 bg-white text-[#FF6B35] border-2 border-[#FF6B35] py-3.5 rounded-xl font-semibold hover:bg-orange-50 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-800 border border-gray-200 py-3.5 rounded-xl font-semibold hover:bg-gray-50 transition-all"
           >
             <ListOrdered size={18} />
             View My Orders
+          </Link>
+          <Link
+            to="/menu"
+            className="flex-1 flex items-center justify-center gap-2 bg-orange-50 text-[#FF6B35] py-3.5 rounded-xl font-semibold hover:bg-orange-100 transition-all"
+          >
+            <ShoppingBag size={18} />
+            Order More
           </Link>
         </div>
       </div>
     </div>
   );
 }
-
